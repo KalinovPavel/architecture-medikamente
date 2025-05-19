@@ -1,0 +1,10 @@
+@startuml
+left to right direction
+actor Бухгалтер as booker
+database "1С:Бухгалтерия\n(финансовые данные)" as accounting
+database "1С:Склад\n(учет товаров)" as trade
+
+booker --> accounting : ведет учет (операции, отчеты)
+accounting --> trade : запрашивает данные по товарообороту
+trade --> accounting : передает сводные данные (OLE обмен)
+@enduml
