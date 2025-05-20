@@ -9,6 +9,9 @@ actor "Сотрудник ресепшена" as staff
 node "DMZ" {
   frame "Web-портал пациента\nAngular/React app (SPA)" as portal
 }
+node "Labaratory" {
+  frame "Лаборатория" as lab
+}
 node "Backend Cluster" {
   node "Сеть приложений (внутр.)" as cluster {
     frame "API-шлюз" as api_gw
@@ -17,6 +20,7 @@ node "Backend Cluster" {
     frame "Модуль аудита" as audit
     frame "Auth Service (Keycloak)" as auth
   }
+  frame "S3 хранилище \n(Minio)" as minio
   database "PostgreSQL DB\n(+ Atlas tagging)" as db 
   frame "Vault\n(Secrets Mgmt)" as vault
 }
@@ -32,6 +36,22 @@ crm --> audit : Логирование действия\n(Async, TLS)
 notify --> audit : Логирование события отправки\n(TLS)
 auth --> db : Данные учетных записей\n(JDBC TLS)
 crm --> vault : Запрос секретов/ключей\n(HTTPS API TLS)
+crm --> minio : Хранение неструктурированной информации (HTTPS TLS)
+crm <--> lab : Сторонний сервис по обработке анализов (HTTPS)
+
+note bottom of minio
+- Файлы помечаются как PHI.
+- Шифруются.
+- Доступны через CRM с RBAC/ABAC.
+- Срок хранения до 25 лет или по запросу пациента.
+end note
+
+note right of lab
+- Двусторонний обмен.
+- Проверка токена.
+- Data Minimization
+- Аудит запросов.
+end note
 
 note top of portal
 - Данные сессий хранятся в JWT (нет PII в браузере).
