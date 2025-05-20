@@ -1,0 +1,10 @@
+@startuml
+left to right direction
+actor Кладовщик as keeper
+actor Поставщик as supplier
+database "1С:Склад\n(база учета ТМЦ)" as trade
+
+supplier --> keeper : передает товары и документы
+keeper --> trade : ввод прихода (прием на склад)
+keeper -> trade : списание/выдача материалов 
+@enduml

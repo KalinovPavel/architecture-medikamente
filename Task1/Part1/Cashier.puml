@@ -1,0 +1,14 @@
+@startuml
+left to right direction
+actor Пациент as patient
+actor Кассир as cashier
+circle "Прием оплаты" as payProc
+node "ККМ (кассовый аппарат)" as kkm
+database "1С:Бухгалтерия\n(данные платежей)" as accounting
+
+patient --> cashier : оплачивает услуги (наличные/карта)
+cashier --> payProc : проводит оплату
+payProc --> kkm : фиксирует оплату (сумма, услуга)
+kkm -> accounting : передает данные о платеже (TCP/OLE)
+payProc --> patient : выдает чек об оплате
+@enduml

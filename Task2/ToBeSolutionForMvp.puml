@@ -1,0 +1,109 @@
+@startuml
+
+skinparam wrapWidth 200
+skinparam backgroundColor #F9F9F9
+
+actor "Пациент" as patient 
+actor "Сотрудник ресепшена" as staff 
+
+node "DMZ" {
+  frame "Web-портал пациента\nAngular/React app (SPA)" as portal
+}
+node "Labaratory" {
+  frame "Лаборатория" as lab
+}
+node "Backend Cluster" {
+  node "Сеть приложений (внутр.)" as cluster {
+    frame "API-шлюз" as api_gw
+    frame "CRM-сервис\n(запись, приём)" as crm
+    frame "Сервис уведомлений" as notify
+    frame "Модуль аудита" as audit
+    frame "Auth Service (Keycloak)" as auth
+  }
+  frame "S3 хранилище \n(Minio)" as minio
+  database "PostgreSQL DB\n(+ Atlas tagging)" as db 
+  frame "Vault\n(Secrets Mgmt)" as vault
+}
+
+patient --> portal : Запись/просмотр расписания\n(HTTPS TLS)
+staff --> portal : Управление записями\n(HTTPS TLS)
+portal --> api_gw : REST API вызовы\nJWT + HTTPS
+api_gw --> crm : Запросы по расписанию\n(HTTPS mTLS)
+api_gw --> auth : OAuth2 поток (OIDC)\n(HTTPS)
+crm --> db : Чтение/запись данных пациентов\n(JDBC TLS)
+crm --> notify : Запрос отправки уведомления\n(Внутр. API TLS)
+crm --> audit : Логирование действия\n(Async, TLS)
+notify --> audit : Логирование события отправки\n(TLS)
+auth --> db : Данные учетных записей\n(JDBC TLS)
+crm --> vault : Запрос секретов/ключей\n(HTTPS API TLS)
+crm --> minio : Хранение неструктурированной информации (HTTPS TLS)
+crm <--> lab : Сторонний сервис по обработке анализов (HTTPS)
+
+note bottom of minio
+- Файлы помечаются как PHI.
+- Шифруются.
+- Доступны через CRM с RBAC/ABAC.
+- Срок хранения до 25 лет или по запросу пациента.
+end note
+
+note right of lab
+- Двусторонний обмен.
+- Проверка токена.
+- Data Minimization
+- Аудит запросов.
+end note
+
+note top of portal
+- Данные сессий хранятся в JWT (нет PII в браузере).
+- Все запросы идут по HTTPS.
+- Персональные данные на клиенте отображаются динамически и не кешируются.
+end note
+
+note right of api_gw
+- Проверяет JWT токены (включая роль/права).
+- Ограничивает данные в ответах (API контракты).
+- Rate limiting, WAF для защиты от DDOS.
+end note
+
+note right of auth
+- Хранит аккаунты (хеш пароли, PII профиля).
+- БД auth шифрована, доступ через админов.
+- JWT токены короткие (min scope, подпись RSA).
+- Удаление учётки по запросу (right to be forgotten).
+end note
+
+note bottom of crm
+- Основная логика: пациенты (PII), записи (PHI), оплаты (FINCONF).
+- Данные помечены метками Atlas (PII/PHI) для ABAC.
+- В приложении реализован RBAC/ABAC (проверка прав на поля).
+- Удаление/обезличивание данных пациентов по регламенту (неактивны >N лет).
+end note
+
+note bottom of notify
+- Не хранит контент писем долго (только статус).
+- Email через SMTP(TLS), Push через FCM, звонки через API оператора (TLS/VPN).
+- Конфиденциальные данные в уведомлениях минимизированы (без лишних PII/PHI).
+- Логи доставки хранятся 1 год, затем удаляются.
+end note
+
+note bottom of audit
+- Централизованный журнал: кто/что/когда (с минимумом PII).
+- Логи защищены от изменений (append-only).
+- Доступ только у службы безопасности.
+- Логи хранятся 3 года, старше архивируются/удаляются.
+end note
+
+note bottom of db
+- Хранит данные: PII, PHI, FINCONF, INTCONF (шифрование на уровне диск/колонок).
+- Ключи шифрования в Vault; данные без ключей бесполезны.
+- Реализовано разграничение прав на уровне БД (роль DBA, минимальные привилегии у сервисов).
+- Конфид. данные удаляются/архивируются по политике (напр., мед. записи >25 лет архив).
+end note
+
+note left of vault
+- Хранит секреты: пароли БД, ключи шифрования полей.
+- Доступ к Vault только у сервисов (по токену), админы через MFA.
+- Ключи не покидают Vault (операции шифр/расш. через API).
+- Журналирует доступ к секретам.
+end note
+@enduml

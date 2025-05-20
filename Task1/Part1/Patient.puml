@@ -1,0 +1,20 @@
+@startuml
+left to right direction
+actor Пациент as patient
+actor "Врач-специалист" as doctor
+rectangle "Лаборатория\n(внешняя система)" as lab
+collections "Журнал врача\n(Excel)" as journal
+folder "Файлы пациента\n(папка)" as pfiles
+collections "Реестр лаборатории\n(Excel)" as labReg
+circle "Прием пациента" as consultProc
+
+patient --> doctor : предоставляет информацию о состоянии (PHI)
+doctor --> consultProc : проводит прием
+consultProc --> journal : просматривает расписание (имя пациента)
+consultProc --> pfiles : просматривает историю (файлы)
+consultProc --> lab : направляет образцы/запрос на анализ
+lab --> labReg : регистрирует анализ (дата, пациент, тест)
+lab --> pfiles : передает результат анализа (файл)
+consultProc --> pfiles : заносит данные обследования, диагноз (PHI)
+consultProc --> patient : сообщает рекомендации, результаты
+@enduml

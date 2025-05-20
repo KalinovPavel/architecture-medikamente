@@ -1,0 +1,15 @@
+@startuml
+left to right direction
+actor Пациент as patient
+actor "Администратор\n(ресепшен)" as admin
+collections "Список пациентов\n(Excel)" as patList
+collections "Журнал врача\n(Excel)" as journal
+folder "Файлы пациента\n(папка)" as pfiles
+circle "Запись на прием" as schedProc
+
+patient -> admin : предоставляет данные для записи (ФИО, контакт)
+admin --> schedProc : запрос на запись
+schedProc --> patList : заносит/ищет данные пациента (PII)
+schedProc --> journal : добавляет запись о приеме (имя, время визита)
+schedProc --> pfiles : прикрепляет файл с данными (скан документа)
+@enduml
